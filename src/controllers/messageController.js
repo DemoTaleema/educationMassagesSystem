@@ -39,25 +39,7 @@ class MessageController {
         });
       }
 
-      // Ensure school exists in database
-      let school = await School.findOne({ schoolId });
-      if (!school) {
-        school = new School({
-          schoolId,
-          schoolName,
-          email: `info@${schoolName.toLowerCase().replace(/\s+/g, '')}.se`, // Default email
-          programs: [programId]
-        });
-        await school.save();
-      } else {
-        // Add program to school's programs if not already present
-        if (!school.programs.includes(programId)) {
-          school.programs.push(programId);
-          await school.save();
-        }
-      }
-
-      // Create the message
+      // Create the message directly without school lookup to avoid timeout
       const educationMessage = new EducationMessage({
         messageId: generateRandomId(),
         userId,
@@ -73,7 +55,32 @@ class MessageController {
         status: 'sent'
       });
 
+      console.log('Attempting to save message...');
       const savedMessage = await educationMessage.save();
+      console.log('Message saved successfully:', savedMessage.messageId);
+
+      // Create or update school in background (fire and forget)
+      setImmediate(async () => {
+        try {
+          const existingSchool = await School.findOne({ schoolId }).maxTimeMS(5000);
+          if (!existingSchool) {
+            const school = new School({
+              schoolId,
+              schoolName,
+              email: `info@${schoolName.toLowerCase().replace(/\s+/g, '')}.se`,
+              programs: [programId]
+            });
+            await school.save();
+            console.log('School created in background:', schoolId);
+          } else if (!existingSchool.programs.includes(programId)) {
+            existingSchool.programs.push(programId);
+            await existingSchool.save();
+            console.log('Program added to existing school:', programId);
+          }
+        } catch (error) {
+          console.log('Background school operation failed (non-critical):', error.message);
+        }
+      });
 
       res.status(201).json({
         success: true,
@@ -297,35 +304,55 @@ class MessageController {
 
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
+      // Add timeout to prevent buffering issues
       const messages = await EducationMessage.find({ 
         userId, 
         isDeleted: false 
       })
       .sort({ sentAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .maxTimeMS(10000); // 10 second timeout
 
       const total = await EducationMessage.countDocuments({ 
         userId, 
         isDeleted: false 
-      });
+      }).maxTimeMS(5000); // 5 second timeout for count
 
       console.log(`Found ${messages.length} messages for user ${userId}`);
 
       res.json({
         success: true,
         data: {
-          messages,
+          messages: messages || [],
           pagination: {
             currentPage: parseInt(page),
-            totalPages: Math.ceil(total / parseInt(limit)),
-            totalMessages: total
+            totalPages: Math.ceil((total || 0) / parseInt(limit)),
+            totalMessages: total || 0
           }
         }
       });
 
     } catch (error) {
       console.error('Error in getUserMessages:', error);
+      
+      // If it's a timeout error, return empty array instead of failing
+      if (error.message.includes('buffering timed out') || error.message.includes('timeout')) {
+        console.log('Database timeout, returning empty messages array');
+        return res.json({
+          success: true,
+          data: {
+            messages: [],
+            pagination: {
+              currentPage: parseInt(req.query.page || 1),
+              totalPages: 0,
+              totalMessages: 0
+            }
+          },
+          warning: 'Database timeout - please try again'
+        });
+      }
+      
       res.status(500).json({
         success: false,
         message: 'Failed to fetch user messages',

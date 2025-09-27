@@ -8,9 +8,15 @@ const routes = require('./src/routes');
 // MongoDB connection
 const connectDB = async () => {
   try {
+    // Disable mongoose buffering globally
+    mongoose.set('bufferCommands', false);
+    mongoose.set('bufferMaxEntries', 0);
+    
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://EliasAB:v8ol3N9XlcWaXzsk@taleemaaicloud.gynw8lk.mongodb.net/?retryWrites=true&w=majority&appName=TaleemaAiCloud', {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
     });
     console.log('✅ MongoDB connected successfully');
   } catch (error) {
