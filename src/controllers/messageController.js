@@ -1,6 +1,6 @@
 const EducationMessage = require('../models/EducationMessage');
 const School = require('../models/School');
-const { v4: uuidv4 } = require('crypto');
+const { v4: uuidv4 } = require('uuid');
 
 class MessageController {
   // Send a new message from student about a program
