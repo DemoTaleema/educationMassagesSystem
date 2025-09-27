@@ -1,6 +1,15 @@
 const EducationMessage = require('../models/EducationMessage');
 const School = require('../models/School');
-const { v4: uuidv4 } = require('uuid');
+
+// Generate random string ID
+const generateRandomId = (length = 16) => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
 
 class MessageController {
   // Send a new message from student about a program
@@ -46,7 +55,7 @@ class MessageController {
 
       // Create the message
       const educationMessage = new EducationMessage({
-        messageId: uuidv4(),
+        messageId: generateRandomId(),
         userId,
         userEmail,
         userName,
@@ -189,7 +198,7 @@ class MessageController {
 
       // Create reply message
       const replyMessage = new EducationMessage({
-        messageId: uuidv4(),
+        messageId: generateRandomId(),
         conversationId: originalMessage.conversationId,
         userId: originalMessage.userId,
         userEmail: originalMessage.userEmail,
