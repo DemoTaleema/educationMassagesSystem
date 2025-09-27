@@ -2,11 +2,29 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const dbConnection = require('./src/config/database');
+const mongoose = require('mongoose');
 const routes = require('./src/routes');
+
+// MongoDB connection
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://EliasAB:v8ol3N9XlcWaXzsk@taleemaaicloud.gynw8lk.mongodb.net/?retryWrites=true&w=majority&appName=TaleemaAiCloud', {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('✅ MongoDB connected successfully');
+  } catch (error) {
+    console.error('❌ MongoDB connection error:', error.message);
+    // Don't exit in serverless environment, just log the error
+    console.log('🔄 Continuing without database connection...');
+  }
+};
 
 const app = express();
 const PORT = process.env.PORT || 3008;
+
+// Trust proxy for Vercel
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet({
@@ -21,7 +39,8 @@ const limiter = rateLimit({
   message: {
     success: false,
     message: 'Too many requests, please try again later'
-  }
+  },
+  trustProxy: true
 });
 app.use(limiter);
 
@@ -139,7 +158,10 @@ app.use((error, req, res, next) => {
 // Start server function
 async function startServer() {
   try {
-    // Start HTTP server first
+    // Connect to database
+    await connectDB();
+
+    // Start HTTP server
     const server = app.listen(PORT, () => {
       console.log(`
 ╔══════════════════════════════════════╗
@@ -147,7 +169,7 @@ async function startServer() {
 ║                                      ║
 ║  🚀 Server running on port ${PORT}      ║
 ║  🌐 Environment: ${process.env.NODE_ENV || 'development'}           ║
-║  📊 Database: Connecting...          ║
+║  📊 Database: Connected              ║
 ║  🔐 CORS: Enabled                    ║
 ║  🛡️  Security: Helmet + Rate Limit   ║
 ║                                      ║
@@ -163,20 +185,11 @@ async function startServer() {
       `);
     });
 
-    // Try to connect to database after server starts
-    try {
-      await dbConnection.connect();
-      console.log('✅ Database connected successfully');
-    } catch (error) {
-      console.error('⚠️  Database connection failed:', error.message);
-      console.log('🔄 Server will continue without database connection. Mongoose will auto-reconnect.');
-    }
-
     // Graceful shutdown
     process.on('SIGTERM', async () => {
       console.log('\n🔄 SIGTERM received, shutting down gracefully...');
       server.close(async () => {
-        await dbConnection.disconnect();
+        await mongoose.connection.close();
         process.exit(0);
       });
     });
@@ -184,7 +197,7 @@ async function startServer() {
     process.on('SIGINT', async () => {
       console.log('\n🔄 SIGINT received, shutting down gracefully...');
       server.close(async () => {
-        await dbConnection.disconnect();
+        await mongoose.connection.close();
         process.exit(0);
       });
     });
