@@ -9,6 +9,9 @@ const educationMessageSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  schoolName: {
+    type: String
+  },
   studentName: {
     type: String,
     required: true
@@ -18,6 +21,12 @@ const educationMessageSchema = new mongoose.Schema({
     required: true
   },
   studentPhone: {
+    type: String
+  },
+  programId: {
+    type: String
+  },
+  programTitle: {
     type: String
   },
   message: {

@@ -17,32 +17,51 @@ router.get('/test', (req, res) => {
 router.post('/send-student-message', async (req, res) => {
   try {
     const { 
+      userId,
       studentId, 
-      schoolId, 
-      message, 
+      schoolId,
+      schoolName, 
+      message,
+      userName,
       studentName,
+      userEmail,
       studentEmail,
       studentPhone,
+      programId,
+      programTitle,
       messageType = 'general',
       urgencyLevel = 'normal'
     } = req.body;
 
+    // Use userId if studentId is not provided (for backward compatibility)
+    const finalStudentId = studentId || userId;
+    const finalStudentName = studentName || userName;
+    const finalStudentEmail = studentEmail || userEmail;
+
     // Validate required fields
-    if (!studentId || !schoolId || !message) {
+    if (!finalStudentId || !schoolId || !message) {
       return res.status(400).json({
         success: false,
-        message: 'Student ID, School ID, and message are required'
+        message: 'Student ID, School ID, and message are required',
+        received: {
+          studentId: finalStudentId,
+          schoolId,
+          message: message ? 'provided' : 'missing'
+        }
       });
     }
 
     // Create new message
     const newMessage = new EducationMessage({
-      studentId,
+      studentId: finalStudentId,
       schoolId,
+      schoolName,
       message,
-      studentName,
-      studentEmail,
+      studentName: finalStudentName,
+      studentEmail: finalStudentEmail,
       studentPhone,
+      programId,
+      programTitle,
       messageType,
       urgencyLevel,
       status: 'unread',
