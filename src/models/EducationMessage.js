@@ -1,191 +1,87 @@
 const mongoose = require('mongoose');
 
-// Comprehensive messaging schema for education communication
 const educationMessageSchema = new mongoose.Schema({
-  // Message identification
-  messageId: {
+  studentId: {
     type: String,
-    required: true,
-    unique: true,
-    index: true
-  },
-  conversationId: {
-    type: String,
-    required: true,
-    index: true // Groups related messages together
-  },
-  
-  // User information
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    index: true
-  },
-  userEmail: {
-    type: String,
-    required: true,
-    trim: true,
-    lowercase: true
-  },
-  userName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  
-  // Program/School information
-  programId: {
-    type: String,
-    required: true,
-    index: true
-  },
-  programTitle: {
-    type: String,
-    required: true,
-    trim: true
+    required: true
   },
   schoolId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
-  schoolName: {
+  studentName: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
-  
-  // Message content
+  studentEmail: {
+    type: String,
+    required: true
+  },
+  studentPhone: {
+    type: String
+  },
   message: {
     type: String,
-    required: true,
-    maxlength: 5000,
-    trim: true
+    required: true
   },
   messageType: {
     type: String,
-    enum: ['inquiry', 'reply', 'follow_up'],
-    default: 'inquiry'
+    enum: ['general', 'admissions', 'support', 'complaint', 'inquiry'],
+    default: 'general'
   },
-  
-  // Message metadata
-  sender: {
-    type: String,
-    enum: ['student', 'admin', 'school'],
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['sent', 'delivered', 'read', 'replied'],
-    default: 'sent'
-  },
-  priority: {
+  urgencyLevel: {
     type: String,
     enum: ['low', 'normal', 'high', 'urgent'],
     default: 'normal'
   },
-  
-  // Threading and replies
-  parentMessageId: {
+  status: {
     type: String,
-    index: true,
-    default: null // null for original messages
+    enum: ['unread', 'read', 'replied', 'closed'],
+    default: 'unread'
   },
-  isReply: {
+  isFromStudent: {
     type: Boolean,
-    default: false
+    default: true
   },
-  hasReplies: {
-    type: Boolean,
-    default: false
+  timestamp: {
+    type: Date,
+    default: Date.now
   },
-  replyCount: {
-    type: Number,
-    default: 0
-  },
-  
-  // Admin handling
-  assignedAdminId: {
+  reply: {
     type: String,
-    default: null
+    default: ''
+  },
+  adminId: {
+    type: String
+  },
+  adminName: {
+    type: String
+  },
+  replyTimestamp: {
+    type: Date
+  },
+  readBy: {
+    type: String
+  },
+  readByName: {
+    type: String
+  },
+  readTimestamp: {
+    type: Date
   },
   adminNotes: {
     type: String,
-    maxlength: 1000
-  },
-  
-  // Timestamps
-  sentAt: {
-    type: Date,
-    default: Date.now,
-    required: true
-  },
-  readAt: Date,
-  repliedAt: Date,
-  
-  // Additional metadata
-  attachments: [{
-    fileName: String,
-    fileUrl: String,
-    fileType: String,
-    fileSize: Number
-  }],
-  tags: [String],
-  isArchived: {
-    type: Boolean,
-    default: false
-  },
-  isDeleted: {
-    type: Boolean,
-    default: false
+    default: ''
   }
 }, {
   timestamps: true
 });
 
-// Compound indexes for efficient queries
-educationMessageSchema.index({ userId: 1, sentAt: -1 });
-educationMessageSchema.index({ schoolId: 1, sentAt: -1 });
-educationMessageSchema.index({ conversationId: 1, sentAt: 1 });
-educationMessageSchema.index({ status: 1, sentAt: -1 });
-educationMessageSchema.index({ sender: 1, status: 1 });
-educationMessageSchema.index({ programId: 1, sentAt: -1 });
+// Create indexes for better query performance
+educationMessageSchema.index({ studentId: 1, timestamp: -1 });
+educationMessageSchema.index({ schoolId: 1, status: 1 });
+educationMessageSchema.index({ status: 1, timestamp: -1 });
 
-// Virtual for formatted send time
-educationMessageSchema.virtual('formattedSentAt').get(function() {
-  return this.sentAt.toLocaleString();
-});
+const EducationMessage = mongoose.model('EducationMessage', educationMessageSchema);
 
-// Static methods for common queries
-educationMessageSchema.statics.getConversation = function(conversationId) {
-  return this.find({ conversationId, isDeleted: false })
-    .sort({ sentAt: 1 });
-};
-
-educationMessageSchema.statics.getUserMessages = function(userId) {
-  return this.find({ userId, isDeleted: false })
-    .sort({ sentAt: -1 });
-};
-
-educationMessageSchema.statics.getSchoolMessages = function(schoolId) {
-  return this.find({ schoolId, isDeleted: false })
-    .sort({ sentAt: -1 });
-};
-
-// Pre-save middleware
-educationMessageSchema.pre('save', function(next) {
-  if (this.isNew) {
-    // Generate messageId if not provided
-    if (!this.messageId) {
-      this.messageId = new mongoose.Types.ObjectId().toString();
-    }
-    
-    // Generate conversationId for new conversations
-    if (!this.conversationId && !this.isReply) {
-      this.conversationId = `${this.userId}_${this.programId}_${Date.now()}`;
-    }
-  }
-  next();
-});
-
-module.exports = mongoose.model('EducationMessage', educationMessageSchema);
+module.exports = { EducationMessage };
