@@ -40,8 +40,12 @@ class MessageController {
       }
 
       // Create the message directly without school lookup to avoid timeout
+      // Generate conversationId based on user, school, and program for consistency
+      const conversationId = `${userId}_${schoolId}_${programId}`;
+      
       const educationMessage = new EducationMessage({
         messageId: generateRandomId(),
+        conversationId,
         userId,
         userEmail,
         userName,
