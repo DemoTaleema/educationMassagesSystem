@@ -15,21 +15,6 @@ class MessageController {
   // Send a new message from student about a program
   async sendStudentMessage(req, res) {
     try {
-      // Check database connection
-      const dbConnection = require('../config/database');
-      if (!dbConnection.isConnected) {
-        console.log('Database not connected, attempting to connect...');
-        try {
-          await dbConnection.connect();
-        } catch (dbError) {
-          console.error('Database connection failed:', dbError);
-          return res.status(503).json({
-            success: false,
-            message: 'Database service temporarily unavailable'
-          });
-        }
-      }
-
       const {
         userId,
         userEmail,
@@ -41,9 +26,12 @@ class MessageController {
         message
       } = req.body;
 
+      console.log('Received message data:', { userId, userEmail, userName, programId, programTitle, schoolId, schoolName, message });
+
       // Validate required fields
       if (!userId || !userEmail || !userName || !programId || !programTitle || 
           !schoolId || !schoolName || !message) {
+        console.log('Missing required fields validation failed');
         return res.status(400).json({
           success: false,
           message: 'Missing required fields',
@@ -302,23 +290,10 @@ class MessageController {
   // Get messages for a specific user (for dashboard chat)
   async getUserMessages(req, res) {
     try {
-      // Check database connection
-      const dbConnection = require('../config/database');
-      if (!dbConnection.isConnected) {
-        console.log('Database not connected, attempting to connect...');
-        try {
-          await dbConnection.connect();
-        } catch (dbError) {
-          console.error('Database connection failed:', dbError);
-          return res.status(503).json({
-            success: false,
-            message: 'Database service temporarily unavailable'
-          });
-        }
-      }
-
       const { userId } = req.params;
       const { page = 1, limit = 50 } = req.query;
+
+      console.log(`Fetching messages for userId: ${userId}`);
 
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -334,6 +309,8 @@ class MessageController {
         userId, 
         isDeleted: false 
       });
+
+      console.log(`Found ${messages.length} messages for user ${userId}`);
 
       res.json({
         success: true,

@@ -139,13 +139,7 @@ app.use((error, req, res, next) => {
 // Start server function
 async function startServer() {
   try {
-    // Try to connect to database (non-blocking)
-    dbConnection.connect().catch(error => {
-      console.error('Database connection failed:', error.message);
-      console.log('Server will continue without database connection');
-    });
-
-    // Start HTTP server
+    // Start HTTP server first
     const server = app.listen(PORT, () => {
       console.log(`
 ╔══════════════════════════════════════╗
@@ -168,6 +162,15 @@ async function startServer() {
 ╚══════════════════════════════════════╝
       `);
     });
+
+    // Try to connect to database after server starts
+    try {
+      await dbConnection.connect();
+      console.log('✅ Database connected successfully');
+    } catch (error) {
+      console.error('⚠️  Database connection failed:', error.message);
+      console.log('🔄 Server will continue without database connection. Mongoose will auto-reconnect.');
+    }
 
     // Graceful shutdown
     process.on('SIGTERM', async () => {

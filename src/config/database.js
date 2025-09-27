@@ -17,13 +17,18 @@ class DatabaseConnection {
       const options = {
         useNewUrlParser: true,
         useUnifiedTopology: true,
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 10000, // Increased timeout
         socketTimeoutMS: 45000,
         bufferMaxEntries: 0,
         maxPoolSize: 10,
-        minPoolSize: 1
+        minPoolSize: 1,
+        retryWrites: true,
+        connectTimeoutMS: 10000
       };
 
+      console.log('Attempting to connect to MongoDB...');
+      console.log('Connection string:', this.connectionString.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
+      
       await mongoose.connect(this.connectionString, options);
       
       this.isConnected = true;
