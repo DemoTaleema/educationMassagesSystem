@@ -1,5 +1,6 @@
 const EducationMessage = require('../models/EducationMessage');
 const School = require('../models/School');
+const mongoose = require('mongoose');
 
 // Generate random string ID
 const generateRandomId = (length = 16) => {
@@ -15,6 +16,15 @@ class MessageController {
   // Send a new message from student about a program
   async sendStudentMessage(req, res) {
     try {
+      // Check if mongoose is connected
+      if (mongoose.connection.readyState !== 1) {
+        console.log('Database not connected, current state:', mongoose.connection.readyState);
+        return res.status(503).json({
+          success: false,
+          message: 'Database service temporarily unavailable'
+        });
+      }
+
       const {
         userId,
         userEmail,
@@ -60,7 +70,15 @@ class MessageController {
       });
 
       console.log('Attempting to save message...');
-      const savedMessage = await educationMessage.save();
+      
+      // Add timeout to the save operation
+      const savedMessage = await Promise.race([
+        educationMessage.save(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Save operation timeout')), 8000)
+        )
+      ]);
+      
       console.log('Message saved successfully:', savedMessage.messageId);
 
       // Create or update school in background (fire and forget)
@@ -98,6 +116,16 @@ class MessageController {
 
     } catch (error) {
       console.error('Error in sendStudentMessage:', error);
+      
+      // Check if it's a timeout or connection error
+      if (error.message.includes('timeout') || error.message.includes('buffering')) {
+        return res.status(503).json({
+          success: false,
+          message: 'Database operation timed out',
+          error: 'Service temporarily unavailable'
+        });
+      }
+      
       res.status(500).json({
         success: false,
         message: 'Failed to send message',

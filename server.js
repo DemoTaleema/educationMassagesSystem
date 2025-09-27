@@ -164,10 +164,7 @@ app.use((error, req, res, next) => {
 // Start server function
 async function startServer() {
   try {
-    // Connect to database
-    await connectDB();
-
-    // Start HTTP server
+    // Start HTTP server first
     const server = app.listen(PORT, () => {
       console.log(`
 ╔══════════════════════════════════════╗
@@ -175,7 +172,7 @@ async function startServer() {
 ║                                      ║
 ║  🚀 Server running on port ${PORT}      ║
 ║  🌐 Environment: ${process.env.NODE_ENV || 'development'}           ║
-║  📊 Database: Connected              ║
+║  📊 Database: Connecting...          ║
 ║  🔐 CORS: Enabled                    ║
 ║  🛡️  Security: Helmet + Rate Limit   ║
 ║                                      ║
@@ -189,6 +186,13 @@ async function startServer() {
 ║                                      ║
 ╚══════════════════════════════════════╝
       `);
+    });
+
+    // Connect to database after server starts (non-blocking)
+    connectDB().then(() => {
+      console.log('📊 Database: Connected');
+    }).catch(error => {
+      console.error('📊 Database: Failed to connect:', error.message);
     });
 
     // Graceful shutdown
