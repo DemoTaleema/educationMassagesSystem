@@ -139,8 +139,11 @@ app.use((error, req, res, next) => {
 // Start server function
 async function startServer() {
   try {
-    // Connect to database
-    await dbConnection.connect();
+    // Try to connect to database (non-blocking)
+    dbConnection.connect().catch(error => {
+      console.error('Database connection failed:', error.message);
+      console.log('Server will continue without database connection');
+    });
 
     // Start HTTP server
     const server = app.listen(PORT, () => {
@@ -150,12 +153,13 @@ async function startServer() {
 ║                                      ║
 ║  🚀 Server running on port ${PORT}      ║
 ║  🌐 Environment: ${process.env.NODE_ENV || 'development'}           ║
-║  📊 Database: Connected              ║
+║  📊 Database: Connecting...          ║
 ║  🔐 CORS: Enabled                    ║
 ║  🛡️  Security: Helmet + Rate Limit   ║
 ║                                      ║
 ║  Endpoints:                          ║
 ║  • GET  /health                      ║
+║  • GET  /api/messages/test           ║
 ║  • POST /api/messages/send-student-message ║
 ║  • GET  /api/messages/admin/all      ║
 ║  • POST /api/messages/admin/reply/:id ║

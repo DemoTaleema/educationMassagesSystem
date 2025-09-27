@@ -15,6 +15,21 @@ class MessageController {
   // Send a new message from student about a program
   async sendStudentMessage(req, res) {
     try {
+      // Check database connection
+      const dbConnection = require('../config/database');
+      if (!dbConnection.isConnected) {
+        console.log('Database not connected, attempting to connect...');
+        try {
+          await dbConnection.connect();
+        } catch (dbError) {
+          console.error('Database connection failed:', dbError);
+          return res.status(503).json({
+            success: false,
+            message: 'Database service temporarily unavailable'
+          });
+        }
+      }
+
       const {
         userId,
         userEmail,
@@ -31,7 +46,8 @@ class MessageController {
           !schoolId || !schoolName || !message) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields'
+          message: 'Missing required fields',
+          received: { userId, userEmail, userName, programId, programTitle, schoolId, schoolName, message }
         });
       }
 
@@ -286,6 +302,21 @@ class MessageController {
   // Get messages for a specific user (for dashboard chat)
   async getUserMessages(req, res) {
     try {
+      // Check database connection
+      const dbConnection = require('../config/database');
+      if (!dbConnection.isConnected) {
+        console.log('Database not connected, attempting to connect...');
+        try {
+          await dbConnection.connect();
+        } catch (dbError) {
+          console.error('Database connection failed:', dbError);
+          return res.status(503).json({
+            success: false,
+            message: 'Database service temporarily unavailable'
+          });
+        }
+      }
+
       const { userId } = req.params;
       const { page = 1, limit = 50 } = req.query;
 

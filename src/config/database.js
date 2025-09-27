@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 class DatabaseConnection {
   constructor() {
-    this.connectionString = process.env.MONGODB_URI || 'mongodb://localhost:27017/taleema_education_messages';
+    this.connectionString = process.env.MONGODB_URI || 'mongodb+srv://EliasAB:v8ol3N9XlcWaXzsk@taleemaaicloud.gynw8lk.mongodb.net/?retryWrites=true&w=majority&appName=TaleemaAiCloud';
     this.isConnected = false;
   }
 

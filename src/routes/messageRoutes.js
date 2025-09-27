@@ -2,6 +2,15 @@ const express = require('express');
 const messageController = require('../controllers/messageController');
 const router = express.Router();
 
+// Test endpoint that doesn't require database
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Message routes are working',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Student message routes
 router.post('/send-student-message', messageController.sendStudentMessage);
 router.get('/user/:userId', messageController.getUserMessages);
