@@ -86,7 +86,10 @@ app.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'Taleema Education Messages System API',
+    status: 'running',
     version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    uptime: `${Math.floor(process.uptime() / 60)}m ${Math.floor(process.uptime() % 60)}s`,
     endpoints: {
       health: '/health',
       messages: '/api/messages',
