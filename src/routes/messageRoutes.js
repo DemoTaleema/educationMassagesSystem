@@ -73,6 +73,29 @@ router.post('/send-student-message', async (req, res) => {
 
     const savedMessage = await newMessage.save();
 
+    // Emit real-time event to school admin
+    const io = req.app.get('io');
+    if (io) {
+      const messageData = {
+        id: savedMessage._id,
+        studentName: savedMessage.studentName,
+        studentEmail: savedMessage.studentEmail,
+        subject: savedMessage.programTitle || 'General inquiry',
+        text: savedMessage.message,
+        timestamp: savedMessage.timestamp,
+        status: savedMessage.status,
+        messageType: savedMessage.messageType,
+        urgencyLevel: savedMessage.urgencyLevel,
+        programId: savedMessage.programId,
+        programTitle: savedMessage.programTitle,
+        reply: ''
+      };
+
+      // Emit to school room
+      io.to(`school-${schoolId}`).emit('new-message', messageData);
+      console.log(`📨 New message emitted to school-${schoolId}:`, messageData.text.substring(0, 50) + '...');
+    }
+
     res.status(201).json({
       success: true,
       message: 'Message sent successfully',
@@ -437,6 +460,24 @@ router.post('/school/:schoolId/reply/:messageId', async (req, res) => {
 
     console.log('Reply saved successfully for message:', messageId);
 
+    // Emit real-time event to student
+    const io = req.app.get('io');
+    if (io) {
+      const replyData = {
+        messageId: updatedMessage._id,
+        schoolId: updatedMessage.schoolId,
+        schoolName: updatedMessage.schoolName,
+        reply: updatedMessage.reply,
+        replyTimestamp: updatedMessage.replyTimestamp,
+        originalMessage: updatedMessage.message,
+        programTitle: updatedMessage.programTitle
+      };
+
+      // Emit to student room
+      io.to(`student-${updatedMessage.studentId}`).emit('new-reply', replyData);
+      console.log(`💬 Reply emitted to student-${updatedMessage.studentId}:`, replyData.reply.substring(0, 50) + '...');
+    }
+
     res.json({
       success: true,
       message: 'Reply sent successfully',
@@ -495,6 +536,24 @@ router.post('/school/reply', async (req, res) => {
     await message.save();
 
     console.log(`Reply added to message ${messageId} for school ${trimmedSchoolId}`);
+
+    // Emit real-time event to student
+    const io = req.app.get('io');
+    if (io) {
+      const replyData = {
+        messageId: message._id,
+        schoolId: message.schoolId,
+        schoolName: message.schoolName,
+        reply: message.reply,
+        replyTimestamp: message.replyTimestamp,
+        originalMessage: message.message,
+        programTitle: message.programTitle
+      };
+
+      // Emit to student room
+      io.to(`student-${message.studentId}`).emit('new-reply', replyData);
+      console.log(`💬 Reply emitted to student-${message.studentId}:`, replyData.reply.substring(0, 50) + '...');
+    }
 
     res.json({
       success: true,
