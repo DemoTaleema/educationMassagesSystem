@@ -321,6 +321,7 @@ router.post('/school/messages', async (req, res) => {
       subject: msg.programTitle || 'General inquiry',
       text: msg.message,
       timestamp: msg.timestamp,
+      replyTimestamp: msg.replyTimestamp, // Add replyTimestamp for proper ordering
       status: msg.status,
       conversationId: msg._id, // Using message ID as conversation ID for now
       messageType: msg.messageType,
