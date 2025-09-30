@@ -246,4 +246,178 @@ router.patch('/admin/mark-read/:messageId', async (req, res) => {
   }
 });
 
+// School-specific endpoints
+// Get messages for a specific school
+router.get('/school/:schoolId/messages', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    console.log('Getting messages for school:', schoolId);
+
+    // Find all messages sent to this school
+    const messages = await EducationMessage.find({ schoolId: schoolId })
+      .sort({ timestamp: -1 })
+      .lean();
+
+    console.log(`Found ${messages.length} messages for school ${schoolId}`);
+
+    // Transform the data to match frontend expectations
+    const transformedMessages = messages.map(msg => ({
+      id: msg._id,
+      studentName: msg.studentName,
+      studentEmail: msg.studentEmail,
+      subject: msg.programTitle || 'General inquiry',
+      text: msg.message,
+      timestamp: msg.timestamp,
+      status: msg.status,
+      conversationId: msg._id, // Using message ID as conversation ID for now
+      messageType: msg.messageType,
+      urgencyLevel: msg.urgencyLevel,
+      programId: msg.programId,
+      programTitle: msg.programTitle,
+      reply: msg.reply || ''
+    }));
+
+    res.json({
+      success: true,
+      messages: transformedMessages,
+      count: transformedMessages.length
+    });
+
+  } catch (error) {
+    console.error('Error getting school messages:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get school messages',
+      error: error.message
+    });
+  }
+});
+
+// School reply to a message
+router.post('/school/:schoolId/reply/:messageId', async (req, res) => {
+  try {
+    const { schoolId, messageId } = req.params;
+    const { reply } = req.body;
+
+    console.log('School reply:', { schoolId, messageId, reply });
+
+    if (!reply || !reply.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reply text is required'
+      });
+    }
+
+    // Find the message and update it with the reply
+    const updatedMessage = await EducationMessage.findByIdAndUpdate(
+      messageId,
+      {
+        reply: reply.trim(),
+        status: 'replied',
+        replyTimestamp: new Date(),
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!updatedMessage) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message not found'
+      });
+    }
+
+    // Verify the message belongs to this school
+    if (updatedMessage.schoolId !== schoolId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Message does not belong to this school'
+      });
+    }
+
+    console.log('Reply saved successfully for message:', messageId);
+
+    res.json({
+      success: true,
+      message: 'Reply sent successfully',
+      data: {
+        messageId: updatedMessage._id,
+        reply: updatedMessage.reply,
+        status: updatedMessage.status,
+        replyTimestamp: updatedMessage.replyTimestamp
+      }
+    });
+
+  } catch (error) {
+    console.error('Error sending school reply:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send reply',
+      error: error.message
+    });
+  }
+});
+
+// Get conversation (for now, just return the single message with its reply)
+router.get('/school/:schoolId/conversation/:conversationId', async (req, res) => {
+  try {
+    const { schoolId, conversationId } = req.params;
+    console.log('Getting conversation:', { schoolId, conversationId });
+
+    // For now, treat conversationId as messageId
+    const message = await EducationMessage.findById(conversationId).lean();
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation not found'
+      });
+    }
+
+    // Verify the message belongs to this school
+    if (message.schoolId !== schoolId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Conversation does not belong to this school'
+      });
+    }
+
+    // Build conversation array
+    const conversation = [
+      {
+        id: message._id,
+        text: message.message,
+        sender: 'student',
+        senderName: message.studentName,
+        timestamp: message.timestamp
+      }
+    ];
+
+    // Add reply if it exists
+    if (message.reply && message.reply.trim()) {
+      conversation.push({
+        id: `${message._id}_reply`,
+        text: message.reply,
+        sender: 'school',
+        senderName: message.schoolName || schoolId,
+        timestamp: message.replyTimestamp || message.updatedAt,
+        isReply: true
+      });
+    }
+
+    res.json({
+      success: true,
+      conversation: conversation
+    });
+
+  } catch (error) {
+    console.error('Error getting conversation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get conversation',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
