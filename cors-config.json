@@ -1,0 +1,18 @@
+{
+  "allowed_origins": [
+    "https://endpoints-tunnel.vercel.app"
+  ],
+  "development_origins": [
+    "http://localhost:3010"
+  ],
+  "allowed_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  "allowed_headers": [
+    "Content-Type",
+    "Authorization", 
+    "Accept",
+    "Origin",
+    "X-Requested-With"
+  ],
+  "allow_credentials": true,
+  "max_age": 86400
+}
